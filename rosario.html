@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rosario Interactivo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
+
+  :root{
+    --wine:#5c1a2b;
+    --wine-deep:#3d0f1c;
+    --gold:#b8892b;
+    --gold-soft:#d9b877;
+    --parchment:#f4ecdd;
+    --parchment-dim:#e9ddc6;
+    --accent:#d9b877;
+    --accent-soft:rgba(217,184,119,.35);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0;
+    background:radial-gradient(ellipse at top, #4a1522 0%, var(--wine-deep) 55%, #26060d 100%);
+    color:var(--parchment);
+    font-family:'EB Garamond', serif;
+    min-height:100vh;
+    padding:20px 14px 60px;
+  }
+  .wrap{ max-width:480px; margin:0 auto; }
+
+  header{ text-align:center; margin-bottom:16px; }
+  .crown{ font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--gold-soft); opacity:.8; }
+  h1{
+    font-family:'Cormorant Garamond', serif; font-weight:600;
+    font-size:clamp(26px,7vw,34px); margin:4px 0 2px; letter-spacing:.3px;
+  }
+  .subtitle{ font-style:italic; color:var(--gold-soft); font-size:14px; opacity:.9; }
+
+  /* Mode toggle */
+  .mode-toggle{ display:flex; justify-content:center; gap:8px; margin:14px 0 14px; }
+  .mode-btn{
+    background:rgba(244,236,221,.05); border:1px solid rgba(184,137,43,.4);
+    color:var(--parchment-dim); font-family:'EB Garamond', serif; font-size:13.5px;
+    padding:9px 16px; border-radius:20px; cursor:pointer; transition:.2s ease;
+  }
+  .mode-btn:hover{ border-color:var(--gold); background:rgba(184,137,43,.1); }
+  .mode-btn.active{ background:var(--gold); border-color:var(--gold); color:var(--wine-deep); font-weight:600; }
+
+  /* Simple mysteries panel */
+  .simple-panel{
+    background:rgba(244,236,221,.045); border:1px solid rgba(184,137,43,.28);
+    border-radius:6px; padding:28px clamp(16px,5vw,36px); animation:fadeIn .35s ease;
+  }
+  .simple-mystery{ padding:18px 0; border-top:1px solid rgba(184,137,43,.18); }
+  .simple-mystery:first-of-type{ border-top:none; padding-top:2px; }
+  .simple-num{ font-family:'Cormorant Garamond', serif; color:var(--gold); font-size:12.5px; letter-spacing:2px; text-transform:uppercase; }
+  .simple-title{ font-family:'Cormorant Garamond', serif; font-size:20px; font-weight:600; color:var(--parchment); margin:2px 0 8px; }
+  .simple-text{ font-size:16px; line-height:1.6; color:var(--parchment-dim); }
+  .simple-note{ font-size:13px; color:var(--gold-soft); opacity:.8; margin-top:8px; font-style:italic; }
+
+  /* Day selector - compact pills */
+  .days{ display:flex; justify-content:center; gap:5px; margin:16px 0 4px; flex-wrap:wrap; }
+  .day-btn{
+    background:rgba(244,236,221,.06); border:1px solid rgba(184,137,43,.35);
+    color:var(--parchment-dim); font-family:'EB Garamond', serif; font-size:12.5px;
+    padding:7px 11px; border-radius:20px; cursor:pointer; transition:.2s ease;
+  }
+  .day-btn:hover{ border-color:var(--gold); background:rgba(184,137,43,.1); }
+  .day-btn.active{ background:var(--gold); border-color:var(--gold); color:var(--wine-deep); font-weight:600; }
+  .group-label{ text-align:center; font-size:12.5px; color:var(--gold-soft); opacity:.75; font-style:italic; margin-bottom:10px; }
+
+  /* Rosary SVG */
+  .rosary-holder{
+    position:relative; width:100%; max-width:420px; margin:6px auto 6px;
+    filter:drop-shadow(0 10px 24px rgba(0,0,0,.45));
+  }
+  svg{ width:100%; height:auto; display:block; }
+
+  .chain-loop{ fill:none; stroke:#a9822f; stroke-width:1.3; opacity:.65; }
+  .chain-tail{ fill:none; stroke:#a9822f; stroke-width:1.5; opacity:.7; }
+
+  .bead{ cursor:pointer; transition:transform .25s ease, filter .25s ease; transform-box:fill-box; transform-origin:center; }
+  .bead .fill{ stroke:rgba(35,18,8,.55); stroke-width:.8; }
+  .bead.done .fill{ fill:var(--gold) !important; opacity:.6; }
+  .bead.current .fill{ fill:var(--accent) !important; stroke:var(--parchment); stroke-width:1.4; }
+  .bead.current{ transform:scale(1.6); filter:drop-shadow(0 0 8px var(--accent-soft)); }
+
+  .medal{ cursor:pointer; }
+  .medal .medal-shape{ stroke:rgba(35,18,8,.5); stroke-width:.8; }
+  .medal.done .medal-shape{ fill:var(--gold) !important; opacity:.6; }
+  .medal.current .medal-shape{ fill:var(--accent) !important; stroke:var(--parchment); stroke-width:1.4; }
+  .medal.current{ transform:scale(1.3); transform-box:fill-box; transform-origin:center; filter:drop-shadow(0 0 8px var(--accent-soft)); }
+
+  .cross-mark{ cursor:pointer; }
+  .cross-mark path{ stroke:rgba(35,18,8,.5); stroke-width:.8; }
+  .cross-mark.current path{ fill:var(--accent) !important; }
+  .cross-mark.done path{ fill:var(--gold) !important; opacity:.6; }
+  .cross-mark.current{ transform:scale(1.25); transform-box:fill-box; transform-origin:center; filter:drop-shadow(0 0 8px var(--accent-soft)); }
+
+  /* Prayer card */
+  .card{
+    background:rgba(244,236,221,.05); border:1px solid rgba(184,137,43,.3);
+    border-radius:8px; padding:20px 22px; margin-top:10px; text-align:center;
+    min-height:150px; display:flex; flex-direction:column; justify-content:center;
+    animation:fadeIn .35s ease;
+  }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .kicker{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold-soft); opacity:.85; margin-bottom:6px; }
+  .p-title{ font-family:'Cormorant Garamond', serif; font-size:22px; font-weight:600; color:var(--parchment); margin:0 0 10px; }
+  .p-body{ font-size:16.5px; line-height:1.6; color:var(--parchment-dim); }
+  .p-ref{ display:block; margin-top:6px; font-size:12.5px; font-style:italic; color:var(--gold-soft); }
+  .pre-line{ font-size:14px; font-style:italic; color:var(--gold-soft); opacity:.9; margin-bottom:10px; white-space:pre-line; line-height:1.5; }
+  .extra-line{ margin-top:12px; padding-top:12px; border-top:1px solid rgba(184,137,43,.25); font-size:15px; font-style:italic; color:var(--parchment-dim); opacity:.9; }
+
+  .progress{ text-align:center; font-size:12px; color:var(--gold-soft); opacity:.7; margin:10px 0 2px; }
+  .progress-bar{ width:100%; height:3px; background:rgba(244,236,221,.12); border-radius:3px; overflow:hidden; margin-bottom:6px; }
+  .progress-fill{ height:100%; background:var(--gold); transition:width .3s ease; }
+
+  .controls{ display:flex; gap:10px; margin-top:14px; }
+  .nav-btn{
+    flex:1; padding:14px 0; border-radius:6px; border:1px solid var(--gold);
+    background:transparent; color:var(--gold-soft); font-family:'EB Garamond', serif;
+    font-size:15px; letter-spacing:.5px; cursor:pointer; transition:.2s ease;
+  }
+  .nav-btn:hover{ background:rgba(184,137,43,.12); }
+  .nav-btn.primary{ background:var(--gold); color:var(--wine-deep); font-weight:600; }
+  .nav-btn.primary:hover{ background:var(--gold-soft); }
+  .nav-btn:disabled{ opacity:.35; cursor:default; }
+
+  .reset-row{ text-align:center; margin-top:10px; }
+  .reset-btn{
+    background:none; border:none; color:var(--gold-soft); opacity:.7; font-size:12.5px;
+    font-family:'EB Garamond', serif; font-style:italic; cursor:pointer; text-decoration:underline;
+  }
+  .reset-btn:hover{ opacity:1; }
+
+  footer{ text-align:center; margin-top:26px; font-size:11.5px; color:var(--gold-soft); opacity:.5; }
+  footer a{ color:var(--gold-soft); }
+
+  @media (prefers-reduced-motion: reduce){ .card{ animation:none; } .bead{ transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="crown">✦ Santo Rosario ✦</div>
+    <h1>Rosario Interactivo</h1>
+    <div class="subtitle">Toca cada cuenta y ve rezando en orden</div>
+  </header>
+
+  <nav class="mode-toggle" id="modeToggle">
+    <button class="mode-btn active" data-mode="interactive">Rosario interactivo</button>
+    <button class="mode-btn" data-mode="simple">Solo misterios</button>
+  </nav>
+
+  <nav class="days" id="days"></nav>
+  <div class="group-label" id="groupLabel"></div>
+
+  <section id="interactiveView">
+    <div class="rosary-holder">
+      <svg id="svgRosary" viewBox="0 0 400 560"></svg>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress" id="progressText"></div>
+
+    <div class="card">
+      <div class="kicker" id="kicker"></div>
+      <div class="p-title" id="pTitle"></div>
+      <div class="p-body" id="pBody"></div>
+    </div>
+
+    <div class="controls">
+      <button class="nav-btn" id="prevBtn">◀ Anterior</button>
+      <button class="nav-btn primary" id="nextBtn">Siguiente ▶</button>
+    </div>
+    <div class="reset-row"><button class="reset-btn" id="resetBtn">Comenzar de nuevo</button></div>
+  </section>
+
+  <section id="simpleView" style="display:none;"></section>
+
+  <footer>Oraciones según la Santa Sede · <a href="https://www.vatican.va/special/rosary/documents/misteri_sp.html" target="_blank" rel="noopener">vatican.va</a></footer>
+</div>
+
+<script>
+/* ---------- Prayer texts (fuente: vatican.va) ---------- */
+const SIGN_OF_CROSS = "En el nombre del Padre y del Hijo y del Espíritu Santo. Dios mío, ven en mi auxilio. Señor, date prisa en socorrerme. Gloria al Padre y al Hijo y al Espíritu Santo. Como era en el principio, ahora y siempre, por los siglos de los siglos. Amén.";
+const PADRENUESTRO = "Padre nuestro, que estás en el cielo, santificado sea tu nombre, venga a nosotros tu reino, hágase tu voluntad, en la tierra como en el cielo. Danos hoy nuestro pan de cada día, perdona nuestras ofensas, como también nosotros perdonamos a los que nos ofenden. No nos dejes caer en la tentación, y líbranos del mal. Amén.";
+const AVEMARIA = "Dios te salve, María, llena eres de gracia, el Señor está contigo. Bendita tú eres entre todas las mujeres y bendito es el fruto de tu vientre, Jesús. Santa María, Madre de Dios, ruega por nosotros pecadores, ahora y en la hora de nuestra muerte. Amén.";
+const GLORIA = "Gloria al Padre y al Hijo y al Espíritu Santo. Como era en el principio ahora y siempre, por los siglos de los siglos. Amén.";
+const SALVE = "Dios te salve, Reina y Madre de misericordia, vida, dulzura y esperanza nuestra, Dios te salve. A ti llamamos los desterrados hijos de Eva; a ti suspiramos, gimiendo y llorando, en este valle de lágrimas. Ea, pues, Señora, abogada nuestra, vuelve a nosotros esos tus ojos misericordiosos, y, después de este destierro, muéstranos a Jesús, fruto bendito de tu vientre. ¡Oh clementísima, oh piadosa, oh dulce Virgen María!";
+const JACULATORIA = "Oh Jesús mío, perdona nuestros pecados, líbranos del fuego del infierno, lleva al cielo a todas las almas, especialmente a las más necesitadas de tu misericordia. Amén.";
+const ANGELUS_1 = "V. El Ángel del Señor anunció a María.\nR. Y concibió por obra del Espíritu Santo.";
+const ANGELUS_2 = "V. He aquí la esclava del Señor.\nR. Hágase en mí según tu palabra.";
+const ANGELUS_3 = "V. Y el Verbo se hizo carne.\nR. Y habitó entre nosotros.";
+
+/* ---------- Mysteries by group ---------- */
+const GROUPS = {
+  gozosos: { title:"Misterios Gozosos", days:"Lunes y Sábado", accent:"#a9d9b8",
+    mysteries:[
+      {title:"La Encarnación del Hijo de Dios", text:"Al sexto mes el ángel Gabriel fue enviado por Dios a una ciudad de Galilea, llamada Nazaret, a una virgen desposada con un hombre llamado José; el nombre de la virgen era María.", ref:"Lc 1, 26-27"},
+      {title:"La Visitación a su prima Santa Isabel", text:"María se puso en camino y fue aprisa a la región montañosa. Entró en casa de Zacarías y saludó a Isabel, y el niño saltó de gozo en su seno.", ref:"Lc 1, 39-42"},
+      {title:"El Nacimiento del Hijo de Dios en Belén", text:"Se le cumplieron a María los días del alumbramiento, y dio a luz a su hijo primogénito, le envolvió en pañales y le acostó en un pesebre.", ref:"Lc 2, 1-7"},
+      {title:"La Presentación de Jesús en el Templo", text:"Llevaron a Jesús a Jerusalén para presentarle al Señor, como está escrito en la Ley del Señor.", ref:"Lc 2, 21-24"},
+      {title:"El Niño Jesús perdido y hallado en el Templo", text:"Al cabo de tres días, le encontraron en el Templo sentado en medio de los maestros, escuchándoles y preguntándoles.", ref:"Lc 2, 41-47"}
+    ]},
+  luminosos: { title:"Misterios Luminosos", days:"Jueves", accent:"#bcd7e6",
+    mysteries:[
+      {title:"El Bautismo en el Jordán", text:"Se abrieron los cielos y vio al Espíritu de Dios que bajaba en forma de paloma. Una voz decía: “Este es mi Hijo amado, en quien me complazco”.", ref:"Mt 3, 16-17"},
+      {title:"Las Bodas de Caná", text:"Como faltara vino, la madre de Jesús le dice: “No tienen vino”. Y a los sirvientes: “Haced lo que él os diga”.", ref:"Jn 2, 1-5"},
+      {title:"El Anuncio del Reino de Dios", text:"El tiempo se ha cumplido y el Reino de Dios está cerca; convertíos y creed en el Evangelio.", ref:"Mc 1, 15"},
+      {title:"La Transfiguración", text:"Se transfiguró delante de ellos: su rostro se puso brillante como el sol y sus vestidos se volvieron blancos como la luz.", ref:"Mt 17, 1-2"},
+      {title:"La Institución de la Eucaristía", text:"Tomó Jesús pan y lo bendijo, lo partió y, dándoselo a sus discípulos, dijo: “Tomad, comed, éste es mi cuerpo”.", ref:"Mt 26, 26"}
+    ]},
+  dolorosos: { title:"Misterios Dolorosos", days:"Martes y Viernes", accent:"#c48fa0",
+    mysteries:[
+      {title:"La Oración en el Huerto", text:"Comenzó a sentir tristeza y angustia: “Padre mío, si es posible, que pase de mí esta copa, pero no sea como yo quiero, sino como quieras tú”.", ref:"Mt 26, 36-39"},
+      {title:"La Flagelación atado a la columna", text:"Pilato puso en libertad a Barrabás; y a Jesús, después de haberlo hecho azotar, lo entregó para que fuera crucificado.", ref:"Mt 27, 26"},
+      {title:"La Coronación de espinas", text:"Trenzando una corona de espinas, se la pusieron sobre la cabeza, y le hacían burla diciendo: “Salve, Rey de los judíos”.", ref:"Mt 27, 27-29"},
+      {title:"Jesús con la Cruz camino del Calvario", text:"Obligaron a Simón de Cirene a que llevara su cruz. Lo condujeron al lugar del Gólgota, que quiere decir de la “Calavera”.", ref:"Mc 15, 21-22"},
+      {title:"La Crucifixión y muerte de Jesús", text:"Jesús, dando un fuerte grito dijo: “Padre, en tus manos pongo mi espíritu”, y, dicho esto, expiró.", ref:"Lc 23, 33-46"}
+    ]},
+  gloriosos: { title:"Misterios Gloriosos", days:"Miércoles y Domingo", accent:"#e6c15c",
+    mysteries:[
+      {title:"La Resurrección del Hijo de Dios", text:"Encontraron que la piedra había sido retirada del sepulcro… “¿Por qué buscáis entre los muertos al que está vivo? No está aquí, ha resucitado”.", ref:"Lc 24, 1-6"},
+      {title:"La Ascensión del Señor al cielo", text:"El Señor Jesús, después de hablarles, ascendió al cielo y se sentó a la derecha de Dios.", ref:"Mc 16, 19"},
+      {title:"La Venida del Espíritu Santo", text:"Se les aparecieron unas lenguas como de fuego que se repartieron y se posaron sobre cada uno de ellos; quedaron todos llenos del Espíritu Santo.", ref:"Hch 2, 1-4"},
+      {title:"La Asunción de María al cielo", text:"Todas las generaciones me llamarán bienaventurada porque el Señor ha hecho obras grandes en mí.", ref:"Lc 1, 48-49"},
+      {title:"La Coronación de María como Reina", text:"Una gran señal apareció en el cielo: una mujer, vestida de sol, con la luna bajo sus pies, y una corona de doce estrellas sobre su cabeza.", ref:"Ap 12, 1"}
+    ]}
+};
+const DAY_TO_GROUP = {0:"gloriosos",1:"gozosos",2:"dolorosos",3:"gloriosos",4:"luminosos",5:"dolorosos",6:"gozosos"};
+const DAY_SHORT = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const ORDINAL = ["Primer","Segundo","Tercer","Cuarto","Quinto"];
+
+/* ---------- Geometry ----------
+   Lazo circular arriba (5 decenas) + medalla en el punto inferior del lazo +
+   cola colgando hacia abajo (1 grande, 3 pequeñas) terminando en el crucifijo,
+   tal como cuelga un rosario real. */
+const CX = 200;
+const CY = 178, RADIUS = 145;              // el lazo circular
+const MEDAL = { x:CX, y:CY+RADIUS };       // punto inferior del lazo
+const TAIL = {
+  of1: MEDAL.y+30,
+  s1:  MEDAL.y+58,
+  s2:  MEDAL.y+82,
+  s3:  MEDAL.y+104,
+  crossTop: MEDAL.y+124
+};
+
+function buildLayout(mysteries){
+  const beads = [];
+  const steps = [];
+  let id = 0;
+
+  const medalId = id++; beads.push({id:medalId, type:'medal', x:MEDAL.x, y:MEDAL.y});
+  const of1Id   = id++; beads.push({id:of1Id,   type:'large', x:CX, y:TAIL.of1});
+  const s1Id    = id++; beads.push({id:s1Id,    type:'small', x:CX, y:TAIL.s1});
+  const s2Id    = id++; beads.push({id:s2Id,    type:'small', x:CX, y:TAIL.s2});
+  const s3Id    = id++; beads.push({id:s3Id,    type:'small', x:CX, y:TAIL.s3});
+  const crossId = id++; beads.push({id:crossId, type:'cross', x:CX, y:TAIL.crossTop});
+
+  // circle of 5 decades (55 beads), with a small gap at the bottom for the medal
+  const gapDeg = 26;
+  const startAngle = 90 + gapDeg/2;
+  const span = 360 - gapDeg;
+  const angleStep = span/54;
+  const circleIds = [];
+  for(let i=0;i<55;i++){
+    const angleDeg = startAngle + angleStep*i;
+    const rad = angleDeg*Math.PI/180;
+    const x = CX + RADIUS*Math.cos(rad);
+    const y = CY + RADIUS*Math.sin(rad);
+    const isLarge = (i%11===0);
+    const bid = id++;
+    beads.push({id:bid, type:isLarge?'large':'small', x, y});
+    circleIds.push(bid);
+  }
+
+  steps.push({bead:crossId, kicker:'Sobre el Crucifijo', title:'Señal de la Cruz', body:SIGN_OF_CROSS});
+  steps.push({bead:of1Id,   kicker:'Primera cuenta grande', title:'Padre Nuestro', body:PADRENUESTRO});
+  steps.push({bead:s1Id,    kicker:'Avemaría 1 de 3', title:'Dios te Salve, María', pre:ANGELUS_1, body:AVEMARIA});
+  steps.push({bead:s2Id,    kicker:'Avemaría 2 de 3', title:'Dios te Salve, María', pre:ANGELUS_2, body:AVEMARIA});
+  steps.push({bead:s3Id,    kicker:'Avemaría 3 de 3', title:'Dios te Salve, María', pre:ANGELUS_3, body:AVEMARIA});
+  steps.push({bead:medalId, kicker:'Medalla', title:'Un momento de silencio', body:'Contempla el rostro de María antes de comenzar los misterios.'});
+
+  for(let d=0; d<5; d++){
+    const largeId = circleIds[d*11];
+    const m = mysteries[d];
+    steps.push({bead:largeId, kicker:`${ORDINAL[d]} Misterio`, title:m.title, body:m.text, ref:m.ref});
+    steps.push({bead:largeId, kicker:`${ORDINAL[d]} Misterio`, title:'Padre Nuestro', body:PADRENUESTRO});
+    for(let s=0;s<10;s++){
+      const sid = circleIds[d*11+1+s];
+      steps.push({bead:sid, kicker:`Avemaría ${s+1} de 10 · Decena ${d+1}`, title:'Dios te Salve, María', body:AVEMARIA});
+    }
+    const lastId = circleIds[d*11+10];
+    steps.push({bead:lastId, kicker:`Al final de la Decena ${d+1}`, title:'Gloria al Padre', body:GLORIA, extra:JACULATORIA});
+  }
+
+  steps.push({bead:medalId, kicker:'Para concluir', title:'Dios te Salve, Reina', body:SALVE});
+  steps.push({bead:crossId, kicker:'Para concluir', title:'Señal de la Cruz', body:SIGN_OF_CROSS});
+
+  return {beads, steps, circleIds, medalId, tailIds:[medalId, of1Id, s1Id, s2Id, s3Id, crossId]};
+}
+
+/* ---------- State ---------- */
+let layout = null;
+let stepIndex = 0;
+let currentGroupKey = null;
+
+const svg = document.getElementById('svgRosary');
+const daysNav = document.getElementById('days');
+const groupLabel = document.getElementById('groupLabel');
+const kickerEl = document.getElementById('kicker');
+const titleEl = document.getElementById('pTitle');
+const bodyEl = document.getElementById('pBody');
+const progressText = document.getElementById('progressText');
+const progressFill = document.getElementById('progressFill');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+DAY_SHORT.forEach((label, idx) => {
+  const b = document.createElement('button');
+  b.className = 'day-btn';
+  b.textContent = label;
+  b.dataset.day = idx;
+  b.addEventListener('click', () => loadDay(idx));
+  daysNav.appendChild(b);
+});
+
+let currentDayIdx = new Date().getDay();
+let viewMode = 'interactive';
+
+const modeToggle = document.getElementById('modeToggle');
+const interactiveView = document.getElementById('interactiveView');
+const simpleView = document.getElementById('simpleView');
+
+modeToggle.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    viewMode = btn.dataset.mode;
+    modeToggle.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b===btn));
+    interactiveView.style.display = viewMode === 'interactive' ? '' : 'none';
+    simpleView.style.display = viewMode === 'simple' ? '' : 'none';
+    if(viewMode === 'simple') renderSimple(currentGroupKey);
+  });
+});
+
+function loadDay(idx){
+  currentDayIdx = idx;
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.day)===idx));
+  const groupKey = DAY_TO_GROUP[idx];
+  currentGroupKey = groupKey;
+  const group = GROUPS[groupKey];
+  document.documentElement.style.setProperty('--accent', group.accent);
+  document.documentElement.style.setProperty('--accent-soft', hexToRgba(group.accent, .45));
+  groupLabel.textContent = `${group.title} · se meditan ${group.days}`;
+
+  layout = buildLayout(group.mysteries);
+  stepIndex = 0;
+  drawBeads();
+  render();
+
+  if(viewMode === 'simple') renderSimple(groupKey);
+}
+
+const ORDINAL_FULL = ["Primer","Segundo","Tercer","Cuarto","Quinto"];
+
+function renderSimple(groupKey){
+  const group = GROUPS[groupKey];
+  let html = `<div class="simple-panel">`;
+  group.mysteries.forEach((m, i) => {
+    html += `
+      <div class="simple-mystery">
+        <div class="simple-num">${ORDINAL_FULL[i]} Misterio</div>
+        <div class="simple-title">${m.title}</div>
+        <div class="simple-text">${m.text}<span class="p-ref">${m.ref}</span></div>
+        <div class="simple-note">Padre Nuestro · 10 Avemarías · Gloria · Jaculatoria de Fátima</div>
+      </div>`;
+  });
+  html += `</div>`;
+  simpleView.innerHTML = html;
+}
+
+function hexToRgba(hex, a){
+  const v = hex.replace('#','');
+  const r = parseInt(v.substring(0,2),16), g = parseInt(v.substring(2,4),16), b = parseInt(v.substring(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+const DEFS = `
+  <defs>
+    <radialGradient id="beadGrad" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#d9a35c"/>
+      <stop offset="55%" stop-color="#8a5a2a"/>
+      <stop offset="100%" stop-color="#4f2f16"/>
+    </radialGradient>
+    <radialGradient id="medalGrad" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#f6e2a0"/>
+      <stop offset="55%" stop-color="#b8892b"/>
+      <stop offset="100%" stop-color="#6e4d17"/>
+    </radialGradient>
+    <linearGradient id="crossGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c98f4a"/>
+      <stop offset="100%" stop-color="#4f2f16"/>
+    </linearGradient>
+  </defs>`;
+
+function drawBeads(){
+  const tailPts = layout.tailIds.map(id => layout.beads.find(b=>b.id===id));
+  const tailPath = tailPts.map((p,i)=> (i===0?'M':'L') + p.x + ',' + p.y).join(' ');
+
+  let svgHtml = DEFS;
+  svgHtml += `<circle class="chain-loop" cx="${CX}" cy="${CY}" r="${RADIUS}" />`;
+  svgHtml += `<path class="chain-tail" d="${tailPath}" />`;
+
+  layout.beads.forEach(bead => {
+    if(bead.type === 'cross'){
+      const y0 = bead.y;
+      svgHtml += `
+        <g class="cross-mark" data-bead="${bead.id}">
+          <path d="M ${bead.x-3},${y0} h6 v10 h9 v9 h-9 v21 h-6 v-21 h-9 v-9 h9 z"
+                fill="url(#crossGrad)"></path>
+        </g>`;
+    } else if(bead.type === 'medal'){
+      svgHtml += `
+        <g class="medal" data-bead="${bead.id}">
+          <ellipse class="medal-shape" cx="${bead.x}" cy="${bead.y}" rx="11" ry="8.5" fill="url(#medalGrad)"></ellipse>
+        </g>`;
+    } else {
+      const r = bead.type === 'large' ? 7.5 : 4.5;
+      svgHtml += `
+        <g class="bead ${bead.type}" data-bead="${bead.id}">
+          <circle class="fill" cx="${bead.x}" cy="${bead.y}" r="${r}" fill="url(#beadGrad)"></circle>
+        </g>`;
+    }
+  });
+
+  svg.innerHTML = svgHtml;
+
+  svg.querySelectorAll('[data-bead]').forEach(el => {
+    el.addEventListener('click', () => {
+      const beadId = Number(el.getAttribute('data-bead'));
+      const idx = layout.steps.findIndex(s => s.bead === beadId);
+      if(idx !== -1){ stepIndex = idx; render(); }
+    });
+  });
+}
+
+function render(){
+  const step = layout.steps[stepIndex];
+  kickerEl.textContent = step.kicker;
+  titleEl.textContent = step.title;
+  bodyEl.innerHTML =
+    (step.pre ? `<div class="pre-line">${step.pre.replace(/\n/g,'<br>')}</div>` : '') +
+    step.body +
+    (step.ref ? `<span class="p-ref">${step.ref}</span>` : '') +
+    (step.extra ? `<div class="extra-line">${step.extra}</div>` : '');
+
+  const doneIds = new Set(layout.steps.slice(0, stepIndex).map(s => s.bead));
+  svg.querySelectorAll('[data-bead]').forEach(el => {
+    const beadId = Number(el.getAttribute('data-bead'));
+    el.classList.toggle('current', beadId === step.bead);
+    el.classList.toggle('done', doneIds.has(beadId) && beadId !== step.bead);
+  });
+
+  const total = layout.steps.length;
+  progressText.textContent = `Cuenta ${stepIndex+1} de ${total}`;
+  progressFill.style.width = `${((stepIndex+1)/total)*100}%`;
+
+  prevBtn.disabled = stepIndex === 0;
+  nextBtn.textContent = stepIndex === total-1 ? 'Amén ✦' : 'Siguiente ▶';
+}
+
+prevBtn.addEventListener('click', () => { if(stepIndex>0){ stepIndex--; render(); } });
+nextBtn.addEventListener('click', () => {
+  if(stepIndex < layout.steps.length-1){ stepIndex++; render(); }
+});
+document.getElementById('resetBtn').addEventListener('click', () => { stepIndex = 0; render(); });
+
+loadDay(new Date().getDay());
+</script>
+</body>
+</html>
