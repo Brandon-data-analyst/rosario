@@ -242,10 +242,10 @@ const CX = 200;
 const CY = 178, RADIUS = 145;              // el lazo circular
 const MEDAL = { x:CX, y:CY+RADIUS };       // punto inferior del lazo
 const TAIL = {
-  of1: MEDAL.y+30,
-  s1:  MEDAL.y+58,
-  s2:  MEDAL.y+82,
-  s3:  MEDAL.y+104,
+  s3:  MEDAL.y+30,
+  s2:  MEDAL.y+58,
+  s1:  MEDAL.y+82,
+  of1: MEDAL.y+104,
   crossTop: MEDAL.y+124
 };
 
@@ -301,7 +301,7 @@ function buildLayout(mysteries){
   steps.push({bead:medalId, kicker:'Para concluir', title:'Dios te Salve, Reina', body:SALVE});
   steps.push({bead:crossId, kicker:'Para concluir', title:'Señal de la Cruz', body:SIGN_OF_CROSS});
 
-  return {beads, steps, circleIds, medalId, tailIds:[medalId, of1Id, s1Id, s2Id, s3Id, crossId]};
+  return {beads, steps, circleIds, medalId, tailIds:[medalId, s3Id, s2Id, s1Id, of1Id, crossId]};
 }
 
 /* ---------- State ---------- */
